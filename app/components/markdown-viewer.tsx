@@ -16,6 +16,14 @@ function isMarkdownFile(name: string) {
   return ACCEPTED.some((ext) => lower.endsWith(ext));
 }
 
+// Phát hiện bảng GFM qua dòng phân cách kiểu "| --- | --- |"
+function hasTable(md: string) {
+  return md.split("\n").some((line) => {
+    const t = line.trim();
+    return t.includes("|") && t.includes("-") && /^[\s|:-]+$/.test(t);
+  });
+}
+
 function readAsText(file: File) {
   return new Promise<string>((resolve, reject) => {
     const reader = new FileReader();
@@ -87,13 +95,17 @@ export default function MarkdownViewer() {
   };
 
   const active = files.find((f) => f.name === activeName) ?? null;
+  // Mở rộng khung khi file đang xem có bảng để bảng có thêm chỗ hiển thị
+  const wide = !!active && hasTable(active.content);
 
   return (
     <div
       onDragOver={onDragOver}
       onDragLeave={() => setIsDragging(false)}
       onDrop={onDrop}
-      className="w-full max-w-3xl flex flex-col gap-4"
+      className={`w-full flex flex-col gap-4 transition-[max-width] duration-200 ${
+        wide ? "max-w-5xl" : "max-w-3xl"
+      }`}
     >
       <input
         ref={inputRef}
@@ -202,7 +214,7 @@ export default function MarkdownViewer() {
           {/* Nội dung file đang chọn */}
           {active && (
             <article className="rounded-b-xl border border-t-0 border-black/10 bg-white p-8 dark:border-white/10 dark:bg-zinc-950">
-              <div className="prose prose-zinc max-w-none dark:prose-invert">
+              <div className="prose prose-zinc max-w-none break-words dark:prose-invert prose-pre:overflow-x-auto prose-table:w-full prose-table:table-fixed prose-th:break-words prose-td:break-words prose-td:align-top">
                 <ReactMarkdown remarkPlugins={[remarkGfm]}>
                   {active.content}
                 </ReactMarkdown>

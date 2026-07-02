@@ -23,6 +23,14 @@ export async function POST(request: Request) {
       ? body.name.trim()
       : "untitled.md";
 
-  const id = await saveShare(name, content);
-  return Response.json({ id });
+  try {
+    const id = await saveShare(name, content);
+    return Response.json({ id });
+  } catch (err) {
+    console.error("saveShare failed:", err);
+    return Response.json(
+      { error: "Không lưu được file để chia sẻ" },
+      { status: 500 },
+    );
+  }
 }

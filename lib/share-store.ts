@@ -19,9 +19,13 @@ function newId() {
 
 // Dùng Upstash Redis khi có biến môi trường (production/Vercel); nếu không thì
 // fallback sang filesystem cho môi trường local dev.
-const useRedis = Boolean(
-  process.env.UPSTASH_REDIS_REST_URL && process.env.UPSTASH_REDIS_REST_TOKEN,
-);
+// Tích hợp Upstash trên Vercel đặt tên biến là KV_REST_API_*; SDK mặc định lại
+// tìm UPSTASH_REDIS_REST_* — nên hỗ trợ cả hai.
+const redisUrl =
+  process.env.KV_REST_API_URL || process.env.UPSTASH_REDIS_REST_URL;
+const redisToken =
+  process.env.KV_REST_API_TOKEN || process.env.UPSTASH_REDIS_REST_TOKEN;
+const useRedis = Boolean(redisUrl && redisToken);
 
 // ---------------------------------------------------------------------------
 // Backend: Upstash Redis
@@ -31,7 +35,7 @@ const shareKey = (id: string) => `share:${id}`;
 
 let _redis: Redis | null = null;
 function redis() {
-  if (!_redis) _redis = Redis.fromEnv();
+  if (!_redis) _redis = new Redis({ url: redisUrl!, token: redisToken! });
   return _redis;
 }
 

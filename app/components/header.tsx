@@ -19,7 +19,7 @@ export default function Header() {
             />
           </svg>
           <span className="text-lg font-semibold tracking-tight">
-            Markdown Viewer
+            Markdown Renderer
           </span>
         </div>
         <ThemeToggle />

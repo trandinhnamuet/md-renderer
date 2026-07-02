@@ -14,7 +14,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Markdown Viewer",
+  title: "Markdown Renderer",
   description: "Tải lên file .md và xem nội dung đã được render",
 };
 

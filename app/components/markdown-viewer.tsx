@@ -1,8 +1,7 @@
 "use client";
 
 import { useCallback, useRef, useState } from "react";
-import ReactMarkdown from "react-markdown";
-import remarkGfm from "remark-gfm";
+import MarkdownContent from "./markdown-content";
 
 type LoadedFile = {
   name: string;
@@ -38,6 +37,9 @@ export default function MarkdownViewer() {
   const [activeName, setActiveName] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isDragging, setIsDragging] = useState(false);
+  const [shareLinks, setShareLinks] = useState<Record<string, string>>({});
+  const [sharing, setSharing] = useState(false);
+  const [copiedUrl, setCopiedUrl] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
   const loadFiles = useCallback(async (list: FileList | File[]) => {
@@ -97,6 +99,39 @@ export default function MarkdownViewer() {
   const active = files.find((f) => f.name === activeName) ?? null;
   // Mở rộng khung khi file đang xem có bảng để bảng có thêm chỗ hiển thị
   const wide = !!active && hasTable(active.content);
+  const shareUrl = active ? shareLinks[active.name] : undefined;
+
+  const copyLink = async (url: string) => {
+    try {
+      await navigator.clipboard.writeText(url);
+      setCopiedUrl(url);
+    } catch {
+      /* clipboard không khả dụng — người dùng có thể tự copy từ ô input */
+    }
+  };
+
+  // Tạo link chia sẻ: chỉ khi bấm mới lưu file lên server.
+  const createLink = async () => {
+    if (!active || sharing) return;
+    setSharing(true);
+    setError(null);
+    try {
+      const res = await fetch("/api/share", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: active.name, content: active.content }),
+      });
+      if (!res.ok) throw new Error();
+      const { id } = await res.json();
+      const url = `${window.location.origin}/s/${id}`;
+      setShareLinks((prev) => ({ ...prev, [active.name]: url }));
+      copyLink(url);
+    } catch {
+      setError("Không tạo được link chia sẻ. Vui lòng thử lại.");
+    } finally {
+      setSharing(false);
+    }
+  };
 
   return (
     <div
@@ -214,11 +249,47 @@ export default function MarkdownViewer() {
           {/* Nội dung file đang chọn */}
           {active && (
             <article className="rounded-b-xl border border-t-0 border-black/10 bg-white p-8 dark:border-white/10 dark:bg-zinc-950">
-              <div className="prose prose-zinc max-w-none break-words dark:prose-invert prose-pre:overflow-x-auto prose-table:w-full prose-table:table-fixed prose-th:break-words prose-td:break-words prose-td:align-top">
-                <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                  {active.content}
-                </ReactMarkdown>
+              {/* Thanh công cụ chia sẻ */}
+              <div className="mb-6 flex flex-wrap items-center justify-end gap-2 border-b border-black/5 pb-4 dark:border-white/10">
+                {shareUrl ? (
+                  <>
+                    <input
+                      readOnly
+                      value={shareUrl}
+                      onFocus={(e) => e.currentTarget.select()}
+                      className="min-w-0 flex-1 rounded-lg border border-black/10 bg-zinc-50 px-3 py-1.5 font-mono text-xs text-zinc-600 dark:border-white/15 dark:bg-zinc-900 dark:text-zinc-300"
+                    />
+                    <button
+                      onClick={() => copyLink(shareUrl)}
+                      className="shrink-0 rounded-full bg-blue-600 px-4 py-1.5 text-sm font-medium text-white transition-colors hover:bg-blue-700"
+                    >
+                      {copiedUrl === shareUrl ? "Đã sao chép ✓" : "Sao chép"}
+                    </button>
+                  </>
+                ) : (
+                  <button
+                    onClick={createLink}
+                    disabled={sharing}
+                    className="flex items-center gap-2 rounded-full bg-blue-600 px-4 py-1.5 text-sm font-medium text-white transition-colors hover:bg-blue-700 disabled:opacity-60"
+                  >
+                    <svg
+                      className="h-4 w-4"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                      strokeWidth={2}
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        d="M13.5 6H5.25A2.25 2.25 0 0 0 3 8.25v10.5A2.25 2.25 0 0 0 5.25 21h10.5A2.25 2.25 0 0 0 18 18.75V10.5m-10.5 6L21 3m0 0h-5.25M21 3v5.25"
+                      />
+                    </svg>
+                    {sharing ? "Đang tạo..." : "Tạo link chia sẻ"}
+                  </button>
+                )}
               </div>
+              <MarkdownContent content={active.content} />
             </article>
           )}
         </>

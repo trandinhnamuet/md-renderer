@@ -1,17 +1,30 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useSyncExternalStore } from "react";
 
 type Theme = "light" | "dark";
 
-export default function ThemeToggle() {
-  const [theme, setTheme] = useState<Theme | null>(null);
+// Nguồn sự thật là class trên <html> (được script trong layout đặt trước khi
+// hydrate). Đọc qua useSyncExternalStore để tránh lệch server/client.
+const listeners = new Set<() => void>();
 
-  useEffect(() => {
-    setTheme(
-      document.documentElement.classList.contains("dark") ? "dark" : "light",
-    );
-  }, []);
+function subscribe(onChange: () => void) {
+  listeners.add(onChange);
+  return () => {
+    listeners.delete(onChange);
+  };
+}
+
+function getSnapshot(): Theme {
+  return document.documentElement.classList.contains("dark") ? "dark" : "light";
+}
+
+function getServerSnapshot(): Theme | null {
+  return null; // trên server chưa biết theme — chưa vẽ icon
+}
+
+export default function ThemeToggle() {
+  const theme = useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
 
   const toggle = () => {
     const next: Theme = theme === "dark" ? "light" : "dark";
@@ -21,7 +34,7 @@ export default function ThemeToggle() {
     } catch {
       /* localStorage không khả dụng — bỏ qua */
     }
-    setTheme(next);
+    listeners.forEach((l) => l());
   };
 
   return (

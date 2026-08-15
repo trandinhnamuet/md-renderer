@@ -1,41 +1,17 @@
 "use client";
 
 import { useSyncExternalStore } from "react";
-
-type Theme = "light" | "dark";
-
-// Nguồn sự thật là class trên <html> (được script trong layout đặt trước khi
-// hydrate). Đọc qua useSyncExternalStore để tránh lệch server/client.
-const listeners = new Set<() => void>();
-
-function subscribe(onChange: () => void) {
-  listeners.add(onChange);
-  return () => {
-    listeners.delete(onChange);
-  };
-}
-
-function getSnapshot(): Theme {
-  return document.documentElement.classList.contains("dark") ? "dark" : "light";
-}
-
-function getServerSnapshot(): Theme | null {
-  return null; // trên server chưa biết theme — chưa vẽ icon
-}
+import {
+  getServerSnapshot,
+  getSnapshot,
+  setTheme,
+  subscribe,
+} from "./theme-store";
 
 export default function ThemeToggle() {
   const theme = useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
 
-  const toggle = () => {
-    const next: Theme = theme === "dark" ? "light" : "dark";
-    document.documentElement.classList.toggle("dark", next === "dark");
-    try {
-      localStorage.setItem("theme", next);
-    } catch {
-      /* localStorage không khả dụng — bỏ qua */
-    }
-    listeners.forEach((l) => l());
-  };
+  const toggle = () => setTheme(theme === "dark" ? "light" : "dark");
 
   return (
     <button

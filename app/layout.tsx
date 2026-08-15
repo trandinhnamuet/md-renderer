@@ -19,7 +19,8 @@ export const metadata: Metadata = {
 };
 
 // Chạy trước khi React hydrate để áp dụng theme ngay, tránh nhấp nháy (FOUC).
-const themeScript = `(function(){try{var t=localStorage.getItem('theme');var d=t?t==='dark':matchMedia('(prefers-color-scheme: dark)').matches;document.documentElement.classList.toggle('dark',d);}catch(e){}})();`;
+// Mặc định là light mode; chỉ dùng dark khi người dùng đã tự chọn trước đó.
+const themeScript = `(function(){try{document.documentElement.classList.toggle('dark',localStorage.getItem('theme')==='dark');}catch(e){}})();`;
 
 export default function RootLayout({
   children,

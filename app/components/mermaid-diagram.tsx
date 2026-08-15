@@ -2,6 +2,7 @@
 
 import { useEffect, useId, useState, useSyncExternalStore } from "react";
 import { getServerSnapshot, getSnapshot, subscribe } from "./theme-store";
+import DiagramLightbox from "./diagram-lightbox";
 
 type State =
   | { status: "loading" }
@@ -15,6 +16,7 @@ type State =
 export default function MermaidDiagram({ chart }: { chart: string }) {
   const theme = useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
   const [state, setState] = useState<State>({ status: "loading" });
+  const [zoomed, setZoomed] = useState(false);
 
   // id phải hợp lệ cho phần tử SVG; useId() có ký tự ":" nên cần lọc bỏ.
   const domId = `mermaid-${useId().replace(/[^a-zA-Z0-9]/g, "")}`;
@@ -76,10 +78,39 @@ export default function MermaidDiagram({ chart }: { chart: string }) {
   }
 
   return (
-    <div
-      className="not-prose my-6 flex justify-center overflow-x-auto [&_svg]:h-auto [&_svg]:max-w-full"
-      // SVG do mermaid sinh ra, đã lọc theo securityLevel "strict".
-      dangerouslySetInnerHTML={{ __html: state.svg }}
-    />
+    <div className="not-prose my-6">
+      <button
+        type="button"
+        onClick={() => setZoomed(true)}
+        title="Nhấn để phóng to sơ đồ"
+        className="group relative block w-full cursor-zoom-in overflow-x-auto rounded-xl border border-transparent p-2 transition-colors hover:border-black/10 hover:bg-black/[.02] dark:hover:border-white/15 dark:hover:bg-white/[.03]"
+      >
+        <div
+          className="flex justify-center [&_svg]:h-auto [&_svg]:max-w-full"
+          // SVG do mermaid sinh ra, đã lọc theo securityLevel "strict".
+          dangerouslySetInnerHTML={{ __html: state.svg }}
+        />
+        <span className="pointer-events-none absolute right-3 top-3 flex items-center gap-1.5 rounded-lg bg-zinc-900/80 px-2.5 py-1.5 text-xs font-medium text-white opacity-0 transition-opacity group-hover:opacity-100">
+          <svg
+            className="h-3.5 w-3.5"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+            strokeWidth={2}
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              d="M21 21l-4.35-4.35M11 8v6m-3-3h6m4 0a7 7 0 1 1-14 0 7 7 0 0 1 14 0Z"
+            />
+          </svg>
+          Phóng to
+        </span>
+      </button>
+
+      {zoomed && (
+        <DiagramLightbox svg={state.svg} onClose={() => setZoomed(false)} />
+      )}
+    </div>
   );
 }
